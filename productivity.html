@@ -1,0 +1,963 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Tracker" />
+<meta name="theme-color" content="#faf9f7" />
+<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='36' fill='%231f2330'/><text x='50%25' y='54%25' font-size='110' text-anchor='middle' fill='%23e0a93a' font-family='-apple-system,sans-serif' font-weight='700' dominant-baseline='middle'>%E2%98%85</text></svg>" />
+<title>Hourly Productivity Tracker</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #faf9f7;
+    color: #1f2330;
+    font-size: 14px;
+    line-height: 1.45;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 24px 60px; }
+
+  header.top {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 18px;
+  }
+  header.top h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  header.top .sub { color: #6b7080; font-size: 13px; margin-top: 2px; }
+
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btn {
+    appearance: none; border: 1px solid #d9d9d9; background: #fff;
+    border-radius: 8px; padding: 7px 12px; font-size: 13px; cursor: pointer;
+    color: #1f2330; transition: background .12s, border-color .12s;
+  }
+  .btn:hover { background: #f1f1ef; }
+  .btn.danger { color: #a23131; border-color: #e8c4c4; }
+  .btn.danger:hover { background: #fdecec; }
+  .btn.icon { padding: 7px 10px; }
+
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid #e6e4df; margin-bottom: 14px; }
+  .tab {
+    padding: 10px 14px; font-size: 13px; cursor: pointer;
+    border: none; background: none; color: #6b7080;
+    border-bottom: 2px solid transparent; margin-bottom: -1px; font-weight: 500;
+  }
+  .tab.active { color: #1f2330; border-bottom-color: #1f2330; }
+  .tab .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #c9c7c0; margin-left: 6px; vertical-align: middle; }
+  .tab.has-entries .dot { background: #4f7d4f; }
+
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+  .stat { background: #fff; border: 1px solid #ece9e3; border-radius: 10px; padding: 12px 14px; }
+  .stat .label { color: #6b7080; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat .value { font-size: 20px; font-weight: 600; margin-top: 4px; }
+  .stat .sub { color: #6b7080; font-size: 11px; margin-top: 2px; }
+
+  .goal {
+    background: #fff; border: 1px solid #ece9e3; border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 16px;
+    display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; align-items: center;
+  }
+  .goal.done { border-color: #b8d6b8; background: #f1faf1; }
+  .goal h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em;
+    color: #6b7080; margin: 0 0 8px; font-weight: 600;
+  }
+  .goal .title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .goal .hours-earned { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+  .goal .hours-earned .of { color: #9a9a92; font-size: 14px; font-weight: 500; margin-left: 4px; }
+  .goal .legend { color: #6b7080; font-size: 12px; margin-top: 2px; }
+
+  .progress { height: 10px; background: #f1efe9; border-radius: 999px; overflow: hidden; margin-top: 10px; }
+  .progress .fill { height: 100%; background: linear-gradient(90deg, #5a8a5a, #74a874); width: 0%; transition: width .35s ease; }
+  .goal.done .progress .fill { background: linear-gradient(90deg, #3d8a3d, #4faf4f); }
+
+  .goal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .goal-action {
+    background: #faf9f5; border: 1px solid #ece9e3; border-radius: 10px;
+    padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .goal-action .name { font-weight: 600; font-size: 13px; }
+  .goal-action .meta { color: #6b7080; font-size: 11px; }
+  .goal-action .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .goal-action .count { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px; min-width: 50px; }
+  .goal-action .count .small { color: #9a9a92; font-weight: 500; font-size: 12px; }
+  .goal-action .calls-progress { height: 4px; background: #ece9e3; border-radius: 999px; overflow: hidden; }
+  .goal-action .calls-progress .fill { height: 100%; background: #74a874; width: 0%; transition: width .25s ease; }
+  .mini {
+    appearance: none; border: 1px solid #d9d9d9; background: #fff;
+    border-radius: 6px; padding: 4px 9px; font: inherit; font-size: 13px;
+    cursor: pointer; line-height: 1; touch-action: manipulation;
+  }
+  .mini:hover { background: #f1f1ef; }
+  .mini.add { background: #1f2330; color: #fff; border-color: #1f2330; font-weight: 600; }
+  .mini.add:hover { background: #34384a; }
+  .mini.appt { background: #4b5b9a; color: #fff; border-color: #4b5b9a; font-weight: 600; }
+  .mini.appt:hover { background: #5a6cb0; }
+
+  table.grid {
+    width: 100%; border-collapse: separate; border-spacing: 0;
+    background: #fff; border: 1px solid #ece9e3; border-radius: 10px; overflow: hidden;
+  }
+  table.grid th {
+    text-align: left; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.04em; color: #6b7080; font-weight: 600;
+    padding: 10px 12px; background: #f5f3ee; border-bottom: 1px solid #ece9e3;
+  }
+  table.grid td { padding: 6px 8px; border-bottom: 1px solid #f1efe9; vertical-align: middle; }
+  table.grid tr:last-child td { border-bottom: none; }
+  table.grid tr.power-hour td { background: #fdf8ee; }
+  table.grid tr.power-hour td.time::before {
+    content: ""; display: inline-block; width: 6px; height: 6px;
+    border-radius: 50%; background: #e0a93a; margin-right: 6px; vertical-align: middle;
+  }
+  table.grid td.time {
+    font-variant-numeric: tabular-nums; font-weight: 500;
+    color: #1f2330; white-space: nowrap; width: 120px; padding-left: 14px;
+  }
+
+  input.cell, textarea.cell, select.cell {
+    width: 100%; border: 1px solid transparent; background: transparent;
+    padding: 7px 8px; font: inherit; color: inherit; border-radius: 6px; resize: none;
+  }
+  input.cell:hover, textarea.cell:hover, select.cell:hover { background: #faf9f5; }
+  input.cell:focus, textarea.cell:focus, select.cell:focus {
+    outline: none; border-color: #c9d2ea; background: #fff;
+    box-shadow: 0 0 0 2px rgba(75, 110, 200, 0.12);
+  }
+  textarea.cell { min-height: 32px; }
+
+  .rating { display: inline-flex; gap: 2px; }
+  .rating button {
+    background: none; border: none; cursor: pointer; padding: 2px 3px;
+    font-size: 18px; line-height: 1; color: #d9d6cf; transition: color .08s, transform .08s;
+  }
+  .rating button:hover { transform: scale(1.15); }
+  .rating button.on { color: #e0a93a; }
+
+  .col-time { width: 120px; }
+  .col-task { width: 24%; }
+  .col-category { width: 16%; }
+  .col-rating { width: 130px; }
+  .col-notes { width: auto; }
+
+  .footer-row { padding: 10px 12px; background: #faf9f5; color: #6b7080; font-size: 12px; }
+
+  /* Recruiting block */
+  .recruit-block {
+    background: #1f2330; border-radius: 12px;
+    padding: 16px 20px; margin-bottom: 16px; color: #fff;
+  }
+  .recruit-header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px; margin-bottom: 14px;
+  }
+  .recruit-header h2 {
+    margin: 0; font-size: 13px; text-transform: uppercase;
+    letter-spacing: 0.05em; color: #9aa0b8; font-weight: 600;
+  }
+  .recruit-header .time-badge {
+    font-size: 11px; background: rgba(255,255,255,0.1);
+    border-radius: 6px; padding: 3px 8px; color: #9aa0b8;
+  }
+  .recruit-progress-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;
+  }
+  .recruit-meter {
+    background: rgba(255,255,255,0.06); border-radius: 10px; padding: 12px 14px;
+  }
+  .recruit-meter .label { font-size: 11px; color: #9aa0b8; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .recruit-meter .nums { font-size: 22px; font-weight: 700; color: #fff; line-height: 1; }
+  .recruit-meter .nums .of { font-size: 13px; font-weight: 500; color: #9aa0b8; }
+  .recruit-meter .bar { height: 6px; background: rgba(255,255,255,0.12); border-radius: 999px; overflow: hidden; margin-top: 8px; }
+  .recruit-meter .bar .fill { height: 100%; border-radius: 999px; transition: width .3s ease; }
+  .recruit-meter.calls .bar .fill { background: linear-gradient(90deg, #4b8ef5, #74b3ff); }
+  .recruit-meter.sets .bar .fill { background: linear-gradient(90deg, #e0a93a, #f5c842); }
+
+  .recruit-actions {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px;
+  }
+  .recruit-action {
+    background: rgba(255,255,255,0.06); border-radius: 10px; padding: 10px 12px;
+  }
+  .recruit-action .name { font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+  .recruit-action .count { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .recruit-action .btns { display: flex; gap: 5px; flex-wrap: wrap; }
+  .recruit-btn {
+    appearance: none; border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.1); border-radius: 6px;
+    padding: 4px 10px; font: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer; color: #fff; transition: background .12s;
+    touch-action: manipulation;
+  }
+  .recruit-btn:hover { background: rgba(255,255,255,0.18); }
+  .recruit-btn.primary { background: #4b8ef5; border-color: #4b8ef5; }
+  .recruit-btn.primary:hover { background: #3a7ae0; }
+  .recruit-btn.ni { background: #c45a5a; border-color: #c45a5a; }
+  .recruit-btn.ni:hover { background: #b04848; }
+  .recruit-btn.set { background: #b48526; border-color: #b48526; }
+  .recruit-btn.set:hover { background: #9a7020; }
+
+  .recruit-sets {
+    display: flex; gap: 8px; margin-top: 2px;
+  }
+  .set-dot {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: rgba(255,255,255,0.3);
+    transition: all .2s;
+  }
+  .set-dot.done { background: #e0a93a; border-color: #e0a93a; color: #1f2330; }
+  .recruit-ni-note { font-size: 11px; color: #9aa0b8; margin-top: 8px; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #1f2330; color: #fff; padding: 10px 16px; border-radius: 10px;
+    font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+    opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; z-index: 9999;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { background: #2f6f3a; }
+  .toast.celebrate { background: #b48526; }
+  .toast.appt { background: #4b5b9a; }
+
+  @media (max-width: 800px) {
+    .summary { grid-template-columns: repeat(2, 1fr); }
+    .goal { grid-template-columns: 1fr; }
+    .col-task, .col-category, .col-notes { width: auto; }
+    table.grid th:nth-child(3), table.grid td:nth-child(3) { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1>Hourly Productivity Tracker</h1>
+      <div class="sub">Monday–Friday · 10 AM to 9 PM · 3–9 PM power hours · auto-saves to this device</div>
+    </div>
+    <div class="toolbar">
+      <button class="btn icon" id="soundBtn" title="Toggle sound feedback" aria-pressed="true">🔊 Sound</button>
+      <button class="btn" id="exportBtn" title="Download this week as CSV">Export CSV</button>
+      <button class="btn danger" id="resetDayBtn" title="Clear the day you're viewing">Reset day</button>
+      <button class="btn danger" id="resetWeekBtn" title="Clear all five days">Reset week</button>
+    </div>
+  </header>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="summary" id="summary"></div>
+
+  <!-- RECRUITING CALLS BLOCK 10am–12pm -->
+  <section class="recruit-block" id="recruitBlock">
+    <div class="recruit-header">
+      <h2>📞 Recruiting Calls</h2>
+      <span class="time-badge">10:00 AM – 12:00 PM</span>
+    </div>
+
+    <div class="recruit-progress-row" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="recruit-meter calls">
+        <div class="label">Calls + NI this hour</div>
+        <div class="nums"><span id="rCallsHour">0</span><span class="of"> / 30</span></div>
+        <div class="bar"><div class="fill" id="rHourFill"></div></div>
+      </div>
+      <div class="recruit-meter" style="border:1px solid rgba(196,90,90,0.3);">
+        <div class="label" style="color:#e8a0a0;">NI This Session</div>
+        <div class="nums"><span id="rNiSession">0</span><span class="of"> total</span></div>
+        <div class="bar"><div class="fill" id="rNiFill" style="background:linear-gradient(90deg,#8a3030,#c45a5a);"></div></div>
+        <div style="font-size:10px;color:#9aa0b8;margin-top:4px;"><span id="rNiRate">—</span> NI per set</div>
+      </div>
+      <div class="recruit-meter sets">
+        <div class="label">Sets</div>
+        <div class="nums"><span id="rSetsCount">0</span><span class="of"> / 4</span></div>
+        <div class="recruit-sets" id="rSetDots">
+          <div class="set-dot" id="rDot1">1</div>
+          <div class="set-dot" id="rDot2">2</div>
+          <div class="set-dot" id="rDot3">3</div>
+          <div class="set-dot" id="rDot4">4</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="recruit-actions">
+      <div class="recruit-action">
+        <div class="name">📞 Call</div>
+        <div class="count" id="rCallsTotal">0</div>
+        <div class="btns">
+          <button class="recruit-btn primary" data-ract="call-add">+1</button>
+          <button class="recruit-btn" data-ract="call-add-5">+5</button>
+          <button class="recruit-btn" data-ract="call-sub">−</button>
+        </div>
+      </div>
+      <div class="recruit-action">
+        <div class="name">🚫 Not Interested</div>
+        <div class="count" id="rNiTotal">0</div>
+        <div class="btns">
+          <button class="recruit-btn ni" data-ract="ni-add">+1</button>
+          <button class="recruit-btn" data-ract="ni-add-5">+5</button>
+          <button class="recruit-btn" data-ract="ni-sub">−</button>
+        </div>
+        <div class="recruit-ni-note">Counts equal to a call toward hourly goal</div>
+      </div>
+      <div class="recruit-action">
+        <div class="name">🎯 Set</div>
+        <div class="count" id="rSetsTotal">0</div>
+        <div class="btns">
+          <button class="recruit-btn set" data-ract="set-add">+1 Set</button>
+          <button class="recruit-btn" data-ract="set-sub">−</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:12px;color:#9aa0b8;" id="rStatus">Goal: 60 calls + NI total · 4 sets</div>
+      <button class="recruit-btn" data-ract="recruit-reset" style="font-size:11px;padding:3px 8px;color:#9aa0b8;border-color:rgba(255,255,255,0.15);">Reset Day</button>
+    </div>
+  </section>
+
+  <section class="recruit-block" id="goal" style="background:#1a2a1a;">
+    <div class="recruit-header">
+      <h2>⚡ 3 – 9 PM Power Hours</h2>
+      <span class="time-badge">3:00 PM – 9:00 PM · Goal: 6 hrs</span>
+    </div>
+
+    <!-- Progress meters -->
+    <div class="recruit-progress-row" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:14px;">
+      <div class="recruit-meter" style="border:1px solid rgba(90,180,90,0.3);">
+        <div class="label" style="color:#90c890;">Hours Earned</div>
+        <div class="nums"><span id="hoursEarnedText">0</span><span class="of"> / 6</span></div>
+        <div class="bar"><div class="fill" id="goalFill" style="background:linear-gradient(90deg,#3a7a3a,#5ab85a);"></div></div>
+        <div style="font-size:10px;color:#9aa0b8;margin-top:4px;" id="goalStatus"></div>
+      </div>
+      <div class="recruit-meter" style="border:1px solid rgba(75,142,245,0.3);">
+        <div class="label" style="color:#a0c0f0;">Calls + NI this block</div>
+        <div class="nums"><span id="callsCount">0</span><span class="of"> / 35</span></div>
+        <div class="bar"><div class="fill" id="callsFill" style="background:linear-gradient(90deg,#1a5a8a,#4b8ef5);"></div></div>
+        <div style="font-size:10px;color:#9aa0b8;margin-top:4px;"><span id="callsBlocks">0</span> hr-blocks · <span id="callsTotal">0</span> calls · <span id="goalNiCount">0</span> NI</div>
+      </div>
+      <div class="recruit-meter" style="border:1px solid rgba(196,90,90,0.3);">
+        <div class="label" style="color:#e8a0a0;">NI This Session</div>
+        <div class="nums"><span id="goalNiSession">0</span><span class="of"> total</span></div>
+        <div class="bar"><div class="fill" id="goalNiFill" style="background:linear-gradient(90deg,#8a3030,#c45a5a);"></div></div>
+        <div style="font-size:10px;color:#9aa0b8;margin-top:4px;"><span id="apptCount">0</span> appt · <span id="presCount">0</span> pres · <span id="saleCount">0</span> sales</div>
+      </div>
+    </div>
+
+    <!-- Action counters -->
+    <div class="recruit-actions" style="grid-template-columns:repeat(4,1fr);">
+      <div class="recruit-action">
+        <div class="name">📞 Call</div>
+        <div class="count" id="goalCallsDisplay">0</div>
+        <div class="btns">
+          <button class="recruit-btn primary" data-act="call-add">+1</button>
+          <button class="recruit-btn" data-act="call-add-5">+5</button>
+          <button class="recruit-btn" data-act="call-sub">−</button>
+        </div>
+      </div>
+      <div class="recruit-action">
+        <div class="name">🚫 Not Interested</div>
+        <div class="count" id="goalNiDisplay">0</div>
+        <div class="btns">
+          <button class="recruit-btn ni" data-act="ni-goal-add">+1</button>
+          <button class="recruit-btn" data-act="ni-goal-add-5">+5</button>
+          <button class="recruit-btn" data-act="ni-goal-sub">−</button>
+        </div>
+      </div>
+      <div class="recruit-action">
+        <div class="name">📅 Appointment</div>
+        <div class="count" id="goalApptDisplay">0</div>
+        <div class="btns">
+          <button class="recruit-btn" data-act="appt-add" style="background:#4b5b9a;border-color:#4b5b9a;color:#fff;font-weight:600;">+1 (+1)</button>
+          <button class="recruit-btn" data-act="appt-sub">−</button>
+        </div>
+      </div>
+      <div class="recruit-action">
+        <div class="name">🎤 Pres · 💰 Sale</div>
+        <div class="count" style="font-size:13px;"><span id="presCount2">0</span> pres · <span id="saleCount2">0</span> sale</div>
+        <div class="btns">
+          <button class="recruit-btn" data-act="pres-add" style="background:#5a8a5a;border-color:#5a8a5a;color:#fff;font-weight:600;">+ Pres</button>
+          <button class="recruit-btn" data-act="pres-sub">−</button>
+        </div>
+        <div class="btns" style="margin-top:5px;">
+          <button class="recruit-btn" data-act="sale-add" style="background:#b48526;border-color:#b48526;color:#fff;font-weight:600;">+ Sale (2hr)</button>
+          <button class="recruit-btn" data-act="sale-sub">−</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:10px;">
+      <div style="font-size:11px;color:#9aa0b8;">35 calls+NI = 1 hr · appt = +1 call · pres = 1 hr · sale = 2 hr</div>
+    </div>
+  </section>
+
+  <table class="grid">
+    <thead>
+      <tr>
+        <th class="col-time">Time</th>
+        <th class="col-task">Task / Activity</th>
+        <th class="col-category">Category / Project</th>
+        <th class="col-rating">Productivity</th>
+        <th class="col-notes">Notes / Outcomes</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+    <tfoot><tr><td colspan="5" class="footer-row" id="footer"></td></tr></tfoot>
+  </table>
+
+  <datalist id="category-suggestions"></datalist>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const STORAGE_KEY = "hourly-productivity-tracker.v2";
+  const SOUND_KEY = "hourly-productivity-tracker.sound";
+  const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+  const HOURS = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+  const POWER_HOURS = [15, 16, 17, 18, 19, 20];
+  const GOAL_HOURS = 6;
+  const CALLS_PER_BLOCK = 35;
+  const CALLS_PER_APPT = 1;
+
+  function formatHour(h) {
+    const fmt = (n) => {
+      const period = n >= 12 && n < 24 ? "PM" : "AM";
+      const display = n % 12 === 0 ? 12 : n % 12;
+      return display + " " + period;
+    };
+    return fmt(h) + " – " + fmt(h + 1);
+  }
+
+  // ---------- sound ----------
+  let audioCtx = null;
+  let soundOn = localStorage.getItem(SOUND_KEY) !== "0";
+  function ctx() {
+    if (!audioCtx) {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { audioCtx = null; }
+    }
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+  function tone(freq, dur, type, gain, when) {
+    const ac = ctx(); if (!ac) return;
+    const t0 = (when || ac.currentTime);
+    const osc = ac.createOscillator();
+    const g = ac.createGain();
+    osc.type = type || "sine";
+    osc.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(gain || 0.12, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g).connect(ac.destination);
+    osc.start(t0); osc.stop(t0 + dur + 0.02);
+  }
+  function playClick() { if (!soundOn) return; tone(880, 0.07, "triangle", 0.10); }
+  function playSuccess() {
+    if (!soundOn) return; const ac = ctx(); if (!ac) return;
+    const t = ac.currentTime;
+    tone(660, 0.12, "sine", 0.14, t);
+    tone(880, 0.14, "sine", 0.14, t + 0.10);
+    tone(1175, 0.18, "sine", 0.14, t + 0.22);
+  }
+  function playAppt() {
+    if (!soundOn) return; const ac = ctx(); if (!ac) return;
+    const t = ac.currentTime;
+    tone(784, 0.10, "triangle", 0.14, t);
+    tone(988, 0.14, "triangle", 0.14, t + 0.08);
+  }
+  function playBigWin() {
+    if (!soundOn) return; const ac = ctx(); if (!ac) return;
+    const t = ac.currentTime;
+    [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, "triangle", 0.13, t + i * 0.08));
+    tone(523, 0.5, "sine", 0.10, t + 0.40);
+    tone(659, 0.5, "sine", 0.10, t + 0.40);
+    tone(784, 0.5, "sine", 0.10, t + 0.40);
+  }
+  function playCelebrate() {
+    if (!soundOn) return; const ac = ctx(); if (!ac) return;
+    const t = ac.currentTime;
+    const seq = [523, 659, 784, 1047, 1319, 1568];
+    seq.forEach((f, i) => tone(f, 0.16, "triangle", 0.14, t + i * 0.09));
+    [523, 659, 784, 1047].forEach(f => tone(f, 0.9, "sine", 0.09, t + 0.60));
+  }
+
+  // ---------- state ----------
+  const RECRUIT_CALLS_PER_HOUR = 30;
+  const RECRUIT_SETS_GOAL = 4;
+  const RECRUIT_TOTAL_GOAL = 60;
+
+  function emptyRecruit() {
+    return { calls: 0, ni: 0, sets: 0, celebrated: false };
+  }
+
+  function emptyDay() {
+    const rows = {};
+    HOURS.forEach(h => rows[h] = { task: "", category: "", rating: 0, notes: "" });
+    return { rows, goal: { calls: 0, ni: 0, appointments: 0, presentations: 0, sales: 0, celebrated: false }, recruit: emptyRecruit() };
+  }
+  function emptyState() {
+    const days = {};
+    DAYS.forEach(d => days[d] = emptyDay());
+    return { days, activeDay: "Monday" };
+  }
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return emptyState();
+      const parsed = JSON.parse(raw);
+      DAYS.forEach(d => {
+        if (!parsed.days[d]) parsed.days[d] = emptyDay();
+        const day = parsed.days[d];
+        if (!day.rows) day.rows = {};
+        HOURS.forEach(h => { if (!day.rows[h]) day.rows[h] = { task: "", category: "", rating: 0, notes: "" }; });
+        if (!day.goal) day.goal = { calls: 0, appointments: 0, presentations: 0, sales: 0, celebrated: false };
+        if (typeof day.goal.appointments !== "number") day.goal.appointments = 0;
+        if (typeof day.goal.ni !== "number") day.goal.ni = 0;
+        if (!day.recruit) day.recruit = emptyRecruit();
+      });
+      return parsed;
+    } catch (e) { return emptyState(); }
+  }
+  let state = load();
+  let activeDay = state.activeDay || "Monday";
+
+  function save() {
+    state.activeDay = activeDay;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function dayHasEntries(d) {
+    const day = state.days[d];
+    const hasRow = HOURS.some(h => {
+      const r = day.rows[h];
+      return r.task || r.category || r.notes || r.rating > 0;
+    });
+    const g = day.goal;
+    return hasRow || g.calls || g.appointments || g.presentations || g.sales;
+  }
+
+  function hoursEarned(day) {
+    const g = day.goal;
+    return Math.floor((g.calls + g.ni) / CALLS_PER_BLOCK) + g.presentations + g.sales * 2;
+  }
+
+  // ---------- render ----------
+  const tabsEl = document.getElementById("tabs");
+  const rowsEl = document.getElementById("rows");
+  const summaryEl = document.getElementById("summary");
+  const footerEl = document.getElementById("footer");
+  const catList = document.getElementById("category-suggestions");
+  const toastEl = document.getElementById("toast");
+  const soundBtn = document.getElementById("soundBtn");
+
+  function refreshSoundBtn() {
+    soundBtn.textContent = soundOn ? "🔊 Sound" : "🔇 Muted";
+    soundBtn.setAttribute("aria-pressed", soundOn ? "true" : "false");
+  }
+  refreshSoundBtn();
+
+  function renderTabs() {
+    tabsEl.innerHTML = "";
+    DAYS.forEach(d => {
+      const b = document.createElement("button");
+      b.className = "tab" + (d === activeDay ? " active" : "") + (dayHasEntries(d) ? " has-entries" : "");
+      b.innerHTML = d + '<span class="dot"></span>';
+      b.addEventListener("click", () => { activeDay = d; save(); renderAll(); });
+      tabsEl.appendChild(b);
+    });
+  }
+
+  function renderCategorySuggestions() {
+    const set = new Set();
+    DAYS.forEach(d => HOURS.forEach(h => {
+      const c = state.days[d].rows[h].category.trim();
+      if (c) set.add(c);
+    }));
+    catList.innerHTML = "";
+    [...set].sort().forEach(c => {
+      const o = document.createElement("option"); o.value = c; catList.appendChild(o);
+    });
+  }
+
+  function renderRows() {
+    rowsEl.innerHTML = "";
+    const day = state.days[activeDay];
+    HOURS.forEach(h => {
+      const row = day.rows[h];
+      const tr = document.createElement("tr");
+      if (POWER_HOURS.includes(h)) tr.classList.add("power-hour");
+
+      const tdTime = document.createElement("td");
+      tdTime.className = "time"; tdTime.textContent = formatHour(h);
+      tr.appendChild(tdTime);
+
+      const tdTask = document.createElement("td");
+      const taskInput = document.createElement("input");
+      taskInput.type = "text"; taskInput.className = "cell";
+      taskInput.placeholder = POWER_HOURS.includes(h) ? "Calls / appt / presentation / sale…" : "What did you work on?";
+      taskInput.value = row.task;
+      taskInput.addEventListener("input", e => { row.task = e.target.value; save(); renderTabs(); renderSummary(); });
+      tdTask.appendChild(taskInput); tr.appendChild(tdTask);
+
+      const tdCat = document.createElement("td");
+      const catInput = document.createElement("input");
+      catInput.type = "text"; catInput.className = "cell";
+      catInput.placeholder = "e.g. Client A";
+      catInput.setAttribute("list", "category-suggestions");
+      catInput.value = row.category;
+      catInput.addEventListener("input", e => { row.category = e.target.value; save(); renderCategorySuggestions(); renderSummary(); });
+      tdCat.appendChild(catInput); tr.appendChild(tdCat);
+
+      const tdRating = document.createElement("td");
+      const ratingWrap = document.createElement("div");
+      ratingWrap.className = "rating"; ratingWrap.setAttribute("role", "radiogroup");
+      for (let i = 1; i <= 5; i++) {
+        const star = document.createElement("button");
+        star.type = "button"; star.textContent = "★";
+        star.setAttribute("aria-label", i + " star");
+        star.className = i <= row.rating ? "on" : "";
+        star.addEventListener("click", () => {
+          row.rating = (row.rating === i) ? 0 : i;
+          save(); renderTabs(); renderRows(); renderSummary();
+        });
+        ratingWrap.appendChild(star);
+      }
+      tdRating.appendChild(ratingWrap); tr.appendChild(tdRating);
+
+      const tdNotes = document.createElement("td");
+      const notes = document.createElement("textarea");
+      notes.className = "cell"; notes.placeholder = "Outcomes, blockers, follow-ups…"; notes.rows = 1;
+      notes.value = row.notes; autosize(notes);
+      notes.addEventListener("input", e => { row.notes = e.target.value; autosize(notes); save(); renderTabs(); });
+      tdNotes.appendChild(notes); tr.appendChild(tdNotes);
+
+      rowsEl.appendChild(tr);
+    });
+  }
+
+  function autosize(ta) { ta.style.height = "auto"; ta.style.height = (ta.scrollHeight + 2) + "px"; }
+
+  function renderRecruit() {
+    const r = state.days[activeDay].recruit;
+    const totalCalls = r.calls + r.ni; // NI counts equal to a call
+    const hourProgress = totalCalls % RECRUIT_CALLS_PER_HOUR;
+    const sets = r.sets;
+
+    document.getElementById('rCallsHour').textContent = hourProgress;
+    document.getElementById('rCallsTotal').textContent = r.calls;
+    document.getElementById('rNiTotal').textContent = r.ni;
+    document.getElementById('rSetsTotal').textContent = sets;
+    document.getElementById('rSetsCount').textContent = sets;
+    document.getElementById('rHourFill').style.width = Math.min(100, (hourProgress / RECRUIT_CALLS_PER_HOUR) * 100) + '%';
+
+    // Set dots
+    for(let i = 1; i <= 4; i++) {
+      const dot = document.getElementById('rDot' + i);
+      dot.className = 'set-dot' + (i <= sets ? ' done' : '');
+      dot.textContent = i <= sets ? '✓' : i;
+    }
+
+    // NI session meter
+    document.getElementById('rNiSession').textContent = r.ni;
+    const niPct = r.ni > 0 ? Math.min(100, (r.ni / Math.max(1, totalCalls)) * 100 * 2) : 0;
+    document.getElementById('rNiFill').style.width = Math.min(100, niPct) + '%';
+    const niPerSet = r.sets > 0 ? (r.ni / r.sets).toFixed(1) : '—';
+    document.getElementById('rNiRate').textContent = niPerSet === '—' ? '— ' : niPerSet;
+
+    // Status
+    const remaining = Math.max(0, RECRUIT_TOTAL_GOAL - totalCalls);
+    const setsLeft = Math.max(0, RECRUIT_SETS_GOAL - sets);
+    let status = '';
+    if(totalCalls >= RECRUIT_TOTAL_GOAL && sets >= RECRUIT_SETS_GOAL) {
+      status = '🎉 All goals hit! Great recruiting block.';
+    } else {
+      const parts = [];
+      if(remaining > 0) parts.push(remaining + ' calls/NI to goal');
+      if(setsLeft > 0) parts.push(setsLeft + ' set' + (setsLeft > 1 ? 's' : '') + ' to goal');
+      status = parts.join(' · ') || 'Keep going!';
+    }
+    document.getElementById('rStatus').textContent = status;
+  }
+
+
+
+  function renderGoal() {
+    const day = state.days[activeDay];
+    const g = day.goal;
+    const earned = hoursEarned(day);
+    const total = g.calls + g.ni;
+    const blocks = Math.floor(total / CALLS_PER_BLOCK);
+    const blockProgress = total % CALLS_PER_BLOCK;
+
+    // Hours earned
+    document.getElementById('hoursEarnedText').textContent = earned;
+    document.getElementById('goalFill').style.width = Math.min(100, (earned / GOAL_HOURS) * 100) + '%';
+    const hoursLeft = Math.max(0, GOAL_HOURS - earned);
+    document.getElementById('goalStatus').textContent = hoursLeft > 0
+      ? hoursLeft + ' hr' + (hoursLeft !== 1 ? 's' : '') + ' to goal'
+      : '🎉 Goal reached!';
+
+    // Calls + NI progress toward next block
+    document.getElementById('callsCount').textContent = blockProgress;
+    document.getElementById('callsFill').style.width = Math.min(100, (blockProgress / CALLS_PER_BLOCK) * 100) + '%';
+    document.getElementById('callsBlocks').textContent = blocks;
+    document.getElementById('callsTotal').textContent = g.calls;
+    document.getElementById('goalNiCount').textContent = g.ni;
+
+    // NI session meter
+    document.getElementById('goalNiSession').textContent = g.ni;
+    const niPct = total > 0 ? Math.min(100, (g.ni / total) * 100 * 2) : 0;
+    document.getElementById('goalNiFill').style.width = niPct + '%';
+
+    // Appt / pres / sale counters
+    document.getElementById('apptCount').textContent = g.appointments;
+    document.getElementById('presCount').textContent = g.presentations;
+    document.getElementById('saleCount').textContent = g.sales;
+    document.getElementById('goalCallsDisplay').textContent = g.calls;
+    document.getElementById('goalNiDisplay').textContent = g.ni;
+    document.getElementById('goalApptDisplay').textContent = g.appointments;
+    document.getElementById('presCount2').textContent = g.presentations;
+    document.getElementById('saleCount2').textContent = g.sales;
+  }
+
+  function renderSummary() {
+    const day = state.days[activeDay];
+    const entries = HOURS.map(h => day.rows[h]);
+    const logged = entries.filter(r => r.task.trim()).length;
+    const ratings = entries.filter(r => r.rating > 0).map(r => r.rating);
+    const avg = ratings.length ? (ratings.reduce((a,b) => a+b, 0) / ratings.length) : 0;
+    const catTotals = {};
+    entries.forEach(r => {
+      if (r.task.trim()) {
+        const key = r.category.trim() || "(uncategorized)";
+        catTotals[key] = (catTotals[key] || 0) + 1;
+      }
+    });
+    const topCat = Object.entries(catTotals).sort((a,b) => b[1]-a[1])[0];
+
+    summaryEl.innerHTML = "";
+    summaryEl.appendChild(stat("Hours logged", logged + " / " + HOURS.length, activeDay));
+    summaryEl.appendChild(stat("Avg productivity", avg ? avg.toFixed(1) + " ★" : "—", ratings.length ? ratings.length + " rated" : "no ratings yet"));
+    summaryEl.appendChild(stat("Top category", topCat ? topCat[0] : "—", topCat ? topCat[1] + " hr" : ""));
+    summaryEl.appendChild(stat("Week progress", weekProgress() + " / " + (DAYS.length * HOURS.length), "hours filled this week"));
+    footerEl.textContent = "Auto-saved locally · " + new Date().toLocaleTimeString();
+  }
+
+  function weekProgress() {
+    let n = 0;
+    DAYS.forEach(d => HOURS.forEach(h => { if (state.days[d].rows[h].task.trim()) n++; }));
+    return n;
+  }
+
+  function stat(label, value, sub) {
+    const el = document.createElement("div");
+    el.className = "stat";
+    el.innerHTML = '<div class="label"></div><div class="value"></div><div class="sub"></div>';
+    el.querySelector(".label").textContent = label;
+    el.querySelector(".value").textContent = value;
+    el.querySelector(".sub").textContent = sub || "";
+    return el;
+  }
+
+  function toast(msg, kind) {
+    toastEl.className = "toast show " + (kind || "");
+    toastEl.textContent = msg;
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => { toastEl.classList.remove("show"); }, 2200);
+  }
+
+  function renderAll() {
+    renderTabs(); renderCategorySuggestions(); renderRows(); renderGoal(); renderSummary(); renderRecruit();
+  }
+
+  function checkGoalCelebration(prevEarned) {
+    const day = state.days[activeDay];
+    const nowEarned = hoursEarned(day);
+    if (prevEarned < GOAL_HOURS && nowEarned >= GOAL_HOURS) {
+      day.goal.celebrated = true;
+      playCelebrate();
+      toast("🎉 6-hour goal hit for " + activeDay + "!", "celebrate");
+    }
+  }
+  // Remove old goalEl.classList reference since goal is now recruit-block style
+  function _unused() {}
+
+  // Recruiting button handler
+  document.addEventListener("click", (e) => {
+    const rt = e.target.closest("[data-ract]");
+    if(rt) {
+      const act = rt.getAttribute("data-ract");
+      const r = state.days[activeDay].recruit;
+      const prevTotal = r.calls + r.ni;
+      const prevHourBlock = Math.floor(prevTotal / RECRUIT_CALLS_PER_HOUR);
+      const prevSets = r.sets;
+
+      if(act === 'call-add')     { r.calls += 1; playClick(); }
+      else if(act === 'call-add-5') { r.calls += 5; playClick(); }
+      else if(act === 'call-sub')   { r.calls = Math.max(0, r.calls - 1); playClick(); }
+      else if(act === 'ni-add')     { r.ni += 1; playClick(); }
+      else if(act === 'ni-add-5')   { r.ni += 5; playClick(); }
+      else if(act === 'ni-sub')     { r.ni = Math.max(0, r.ni - 1); playClick(); }
+      else if(act === 'set-add') {
+        r.sets += 1;
+        playSuccess();
+        toast('🎯 Set logged! ' + r.sets + ' / ' + RECRUIT_SETS_GOAL, 'success');
+        if(r.sets >= RECRUIT_SETS_GOAL && prevSets < RECRUIT_SETS_GOAL) {
+          setTimeout(() => { playBigWin(); toast('🏆 4 sets — recruiting goal hit!', 'celebrate'); }, 300);
+        }
+      }
+      else if(act === 'set-sub')    { r.sets = Math.max(0, r.sets - 1); playClick(); }
+      else if(act === 'recruit-reset') {
+        if(confirm('Reset recruiting stats for ' + activeDay + '?')) {
+          state.days[activeDay].recruit = emptyRecruit();
+          toast('Recruiting stats reset');
+        }
+      }
+
+      const newTotal = r.calls + r.ni;
+      const newHourBlock = Math.floor(newTotal / RECRUIT_CALLS_PER_HOUR);
+      if(newHourBlock > prevHourBlock) {
+        playSuccess();
+        toast('🔥 ' + RECRUIT_CALLS_PER_HOUR + ' calls/NI done — hour block complete!', 'success');
+      }
+
+      if(newTotal >= RECRUIT_TOTAL_GOAL && prevTotal < RECRUIT_TOTAL_GOAL && !r.celebrated) {
+        r.celebrated = true;
+        playCelebrate();
+        toast('🎉 60 call goal hit for ' + activeDay + '!', 'celebrate');
+      }
+
+      save(); renderRecruit();
+      return;
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest("[data-act]");
+    if (!t) return;
+    const act = t.getAttribute("data-act");
+    const day = state.days[activeDay];
+    const g = day.goal;
+    const prevEarned = hoursEarned(day);
+    const prevBlocks = Math.floor((g.calls + g.ni) / CALLS_PER_BLOCK);
+
+    if (act === "call-add") {
+      g.calls += 1;
+      const newBlocks = Math.floor((g.calls + g.ni) / CALLS_PER_BLOCK);
+      if (newBlocks > prevBlocks) { playSuccess(); toast("🔥 35 calls+NI done — +1 hour earned", "success"); }
+      else { playClick(); }
+    } else if (act === "call-add-5") {
+      g.calls += 5;
+      const newBlocks = Math.floor((g.calls + g.ni) / CALLS_PER_BLOCK);
+      if (newBlocks > prevBlocks) { playSuccess(); toast("🔥 35 calls+NI done — +1 hour earned", "success"); }
+      else { playClick(); }
+    } else if (act === "call-sub") {
+      g.calls = Math.max(0, g.calls - 1);
+      playClick();
+    } else if (act === "ni-goal-add") {
+      g.ni += 1;
+      const newBlocks = Math.floor((g.calls + g.ni) / CALLS_PER_BLOCK);
+      if (newBlocks > prevBlocks) { playSuccess(); toast("🔥 35 calls+NI done — +1 hour earned", "success"); }
+      else { playClick(); }
+    } else if (act === "ni-goal-add-5") {
+      g.ni += 5;
+      const newBlocks = Math.floor((g.calls + g.ni) / CALLS_PER_BLOCK);
+      if (newBlocks > prevBlocks) { playSuccess(); toast("🔥 35 calls+NI done — +1 hour earned", "success"); }
+      else { playClick(); }
+    } else if (act === "ni-goal-sub") {
+      g.ni = Math.max(0, g.ni - 1);
+      playClick();
+    } else if (act === "appt-add") {
+      g.appointments += 1;
+      g.calls += CALLS_PER_APPT;
+      const newBlocks = Math.floor((g.calls + g.ni) / CALLS_PER_BLOCK);
+      if (newBlocks > prevBlocks) {
+        playSuccess();
+        toast("📅 Appointment set (+1 call) — 🔥 hour block earned!", "success");
+      } else {
+        playAppt();
+        toast("📅 Appointment set — +1 call", "appt");
+      }
+    } else if (act === "appt-sub") {
+      if (g.appointments > 0) {
+        g.appointments -= 1;
+        g.calls = Math.max(0, g.calls - CALLS_PER_APPT);
+      }
+      playClick();
+    } else if (act === "pres-add") {
+      g.presentations += 1;
+      playSuccess();
+      toast("🎤 Presentation logged — +1 hour", "success");
+    } else if (act === "pres-sub") {
+      g.presentations = Math.max(0, g.presentations - 1);
+      playClick();
+    } else if (act === "sale-add") {
+      g.sales += 1;
+      playBigWin();
+      toast("💰 Sale logged — +2 hours", "success");
+    } else if (act === "sale-sub") {
+      g.sales = Math.max(0, g.sales - 1);
+      playClick();
+    } else { return; }
+
+    checkGoalCelebration(prevEarned);
+    save(); renderTabs(); renderGoal();
+  });
+
+  soundBtn.addEventListener("click", () => {
+    soundOn = !soundOn;
+    localStorage.setItem(SOUND_KEY, soundOn ? "1" : "0");
+    refreshSoundBtn();
+    if (soundOn) { ctx(); playClick(); }
+  });
+
+  document.getElementById("resetDayBtn").addEventListener("click", () => {
+    if (!confirm("Clear all entries for " + activeDay + "?")) return;
+    state.days[activeDay] = emptyDay();
+    save(); renderAll();
+  });
+
+  document.getElementById("resetWeekBtn").addEventListener("click", () => {
+    if (!confirm("Clear ALL five days? This can't be undone.")) return;
+    state = emptyState(); state.activeDay = activeDay;
+    save(); renderAll();
+  });
+
+  document.getElementById("exportBtn").addEventListener("click", () => {
+    const rows = [["Day", "Time", "Task", "Category", "Rating", "Notes"]];
+    DAYS.forEach(d => HOURS.forEach(h => {
+      const r = state.days[d].rows[h];
+      rows.push([d, formatHour(h), r.task, r.category, r.rating || "", r.notes]);
+    }));
+    rows.push([]);
+    rows.push(["Day", "Calls", "NI (3-9 PM)", "Appointments", "Presentations", "Sales", "Hours earned (of 6)"]);
+    DAYS.forEach(d => {
+      const day = state.days[d];
+      rows.push([d, day.goal.calls, day.goal.ni||0, day.goal.appointments, day.goal.presentations, day.goal.sales, hoursEarned(day)]);
+    });
+    const csv = rows.map(r => r.map(cell => {
+      const s = String(cell ?? "");
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "productivity-week.csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
