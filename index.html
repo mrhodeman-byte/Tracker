@@ -373,7 +373,7 @@
         <div class="name">📅 Appointment</div>
         <div class="count" id="goalApptDisplay">0</div>
         <div class="btns">
-          <button class="recruit-btn" data-act="appt-add" style="background:#4b5b9a;border-color:#4b5b9a;color:#fff;font-weight:600;">+1 (+10)</button>
+          <button class="recruit-btn" data-act="appt-add" style="background:#4b5b9a;border-color:#4b5b9a;color:#fff;font-weight:600;">+1 (+1)</button>
           <button class="recruit-btn" data-act="appt-sub">−</button>
         </div>
       </div>
@@ -392,7 +392,7 @@
     </div>
 
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:10px;">
-      <div style="font-size:11px;color:#9aa0b8;">35 calls+NI = 1 hr · appt = +10 calls · pres = 1 hr · sale = 2 hr</div>
+      <div style="font-size:11px;color:#9aa0b8;">35 calls+NI = 1 hr · appt = +1 call · pres = 1 hr · sale = 2 hr</div>
     </div>
   </section>
 
@@ -425,7 +425,7 @@
   const POWER_HOURS = [15, 16, 17, 18, 19, 20];
   const GOAL_HOURS = 6;
   const CALLS_PER_BLOCK = 35;
-  const CALLS_PER_APPT = 10;
+  const CALLS_PER_APPT = 1;
 
   function formatHour(h) {
     const fmt = (n) => {
@@ -882,10 +882,10 @@
       const newBlocks = Math.floor((g.calls + g.ni) / CALLS_PER_BLOCK);
       if (newBlocks > prevBlocks) {
         playSuccess();
-        toast("📅 Appointment set (+10 calls) — 🔥 hour block earned!", "success");
+        toast("📅 Appointment set (+1 call) — 🔥 hour block earned!", "success");
       } else {
         playAppt();
-        toast("📅 Appointment set — +10 calls", "appt");
+        toast("📅 Appointment set — +1 call", "appt");
       }
     } else if (act === "appt-sub") {
       if (g.appointments > 0) {
